@@ -63,13 +63,17 @@ module.exports = (robot) ->
         roles = roles.concat user.roles
       roles
 
+    findUser: (username) ->
+      for own key, user of robot.brain.data.users
+        if user.name is username or user.mention_name is username
+          return user
+      return null
+
   robot.auth = new Auth
 
-
-  robot.respond /@?(.+) ha(?:s|ve) (["'\w: -_]+) role/i, (msg) ->
+  robot.respond /@?([^\s]+) ha(?:s|ve) (["'\w: -_]+) role/i, (msg) ->
     name = msg.match[1].trim()
     if name.toLowerCase() is 'i' then name = msg.message.user.name
-    if name.match(/(.*)(?:don['’]t|doesn['’]t|do not|does not)/i) then return
 
     unless name.toLowerCase() in ['', 'who', 'what', 'where', 'when', 'why']
       unless robot.auth.isAdmin msg.message.user
@@ -77,7 +81,7 @@ module.exports = (robot) ->
       else
         newRole = msg.match[2].trim().toLowerCase()
 
-        user = robot.brain.userForName(name)
+        user = robot.auth.findUser(name)
         return msg.reply "#{name} does not exist" unless user?
         user.roles or= []
 
@@ -91,7 +95,7 @@ module.exports = (robot) ->
             user.roles.push(newRole)
             msg.reply "OK, #{name} has the '#{newRole}' role."
 
-  robot.respond /@?(.+) (?:don['’]t|doesn['’]t|do not|does not) have (["'\w: -_]+) role/i, (msg) ->
+  robot.respond /@?([^\s]+) (?:don['’]t|doesn['’]t|do not) have (["'\w: -_]+) role/i, (msg) ->
     name = msg.match[1].trim()
     if name.toLowerCase() is 'i' then name = msg.message.user.name
 
@@ -101,7 +105,7 @@ module.exports = (robot) ->
       else
         newRole = msg.match[2].trim().toLowerCase()
 
-        user = robot.brain.userForName(name)
+        user = robot.auth.findUser(name)
         return msg.reply "#{name} does not exist" unless user?
         user.roles or= []
 
@@ -112,10 +116,10 @@ module.exports = (robot) ->
           user.roles = (role for role in user.roles when role isnt newRole)
           msg.reply "OK, #{name} doesn't have the '#{newRole}' role."
 
-  robot.respond /what roles? do(es)? @?(.+) have\?*$/i, (msg) ->
+  robot.respond /what roles? do(es)? @?([^\s]+) have\?*$/i, (msg) ->
     name = msg.match[2].trim()
     if name.toLowerCase() is 'i' then name = msg.message.user.name
-    user = robot.brain.userForName(name)
+    user = robot.auth.findUser(name)
     return msg.reply "#{name} does not exist" unless user?
     userRoles = robot.auth.userRoles(user)
 
